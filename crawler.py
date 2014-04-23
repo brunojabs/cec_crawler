@@ -42,12 +42,13 @@ class Crawler(object):
     def save_product(self, product_div):
         img = product_div.find('img')
         preco = product_div.find('strong', attrs={'class': 'price'})
-        descricao = product_div.find('h3')
+        marca = product_div.find('span', attrs={'class': 'brand'})
+        nome = marca.previous_element.extract()
 
-        print u'Nome: {descricao}, Valor: {preco}, Img: {img} \n'.format(
+        print u'Nome: {nome}\nValor: {preco}\nImg: {img} \n\n'.format(
             img=img.attrs['src'],
             preco=preco.text,
-            descricao=clean_str(descricao.text)
+            nome=clean_str(nome)
         )
 
 
@@ -55,8 +56,8 @@ if __name__ == '__main__':
 
     try:
         param = sys.argv[1]
-    except:
-        pass
+    except IndexError:
+        raise IndexError(u'É preciso informar um parametro para consulta')
     else:
         crawler = Crawler()
         crawler.run(param=param)
