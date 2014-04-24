@@ -30,7 +30,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(FMT))
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 
 # remover \t do texto
@@ -41,10 +41,13 @@ class Crawler(object):
     DOMAIN = 'http://www.cec.com.br'
     SEARCH_URL = '/busca-produto?text=%s'
 
-    def __init__(self, filename):
+    def __init__(self, filename='dados.db'):
         self.url = None
         self.db = CrawlerDB(filename=filename)
+
+        self.products = []
         self._cached_pages = {}
+        self.links = []
 
     def get(self, path_url):
         url = '%s%s' % (self.DOMAIN, path_url)
@@ -64,37 +67,10 @@ class Crawler(object):
 
         return self._cached_pages[url]
 
-    def find_pages(self, page):
-        """ Encontrar todas as páginas que devem ser consultadas """
-        nav = page.find('nav', attrs={'class': 'paginador'})
-
-        if nav:
-            links = {a.attrs['href'] for a in nav.findAll('a', attrs={'class': ''})}
-
-            last_page = nav.find('a', text='›')
-
-            if last_page:
-                last_page_link = last_page.attrs['href']
-                page = self.get(last_page_link)
-
-                return links | self.find_pages(page)
-
-            return links
-
-    def pages(self, main_page):
-        pages = self.find_pages(page=main_page)
-
-        if pages:
-            for page_link in sorted(pages):
-                yield self.get(page_link)
-        else:
-            yield main_page
-
     def run(self, search_param):
         main_page = self.get(self.SEARCH_URL % search_param)
-
-        for page in self.pages(main_page=main_page):
-            self.find_products(html=page)
+        self.find_products(html=main_page)
+        return u'%s products found' % len(self.products)
 
     def find_products(self, html):
         products_divs = html.findAll('div', attrs={'class': 'hproduct'})
@@ -105,9 +81,20 @@ class Crawler(object):
             for product_div in products_divs:
                 self.save_product(product_div)
 
+            next_page = self.next_page(html)
+            if next_page:
+                self.find_products(next_page)
+
         else:
             logger.debug('Nenhum produto encontrado')
 
+    def next_page(self, page):
+        nav = page.find('nav', attrs={'class': 'paginador'})
+        if nav:
+            next_page = nav.find('a', text=u'Próxima')
+            if next_page:
+                return self.get(next_page.attrs['href'])
+        return
     def save_product(self, product_div):
         if product_div.findChildren():
             img = product_div.find('img')
@@ -117,13 +104,17 @@ class Crawler(object):
 
             price_txt = '.'.join(re.findall('\d+', price.text))
 
-            self.db.insert(
-                name=clean_str(name),
-                price=price_txt,
-                brand=clean_str(brand.text),
-                img_url=img.attrs['src'],
-                url=self.url,
-            )
+            product_dict = {
+                'name': clean_str(name),
+                'price': price_txt,
+                'brand': clean_str(brand.text),
+                'img_url': img.attrs['src'],
+                'url': self.url
+            }
+
+            self.products.append(product_dict)
+
+            self.db.insert(**product_dict)
 
 
 class CrawlerDB(object):
