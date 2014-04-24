@@ -10,6 +10,12 @@ def search_for(step, param):
     world.search_param = str(param)
 
 
+@step('I check first product')
+def run_crawler(step):
+    crawler = Crawler()
+    crawler.run(world.search_param)
+    world.result = crawler.products[0]['name']
+
 @step('I run the crawler')
 def run_crawler(step):
     world.result = Crawler().run(world.search_param)
@@ -17,6 +23,6 @@ def run_crawler(step):
 
 @step('I see the result "(.*)"')
 def check_result(step, expected):
-    expected = str(expected)
+    expected = unicode(expected)
     assert world.result == expected, \
         "Got %s" % world.result

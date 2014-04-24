@@ -95,6 +95,7 @@ class Crawler(object):
             if next_page:
                 return self.get(next_page.attrs['href'])
         return
+
     def save_product(self, product_div):
         if product_div.findChildren():
             img = product_div.find('img')
@@ -113,7 +114,6 @@ class Crawler(object):
             }
 
             self.products.append(product_dict)
-
             self.db.insert(**product_dict)
 
 

@@ -1,6 +1,11 @@
 Feature: Search product
     Extract products from CEC site
 
+    Scenario: Check for product "tijolo"
+        Given I search for "tijolo"
+        When I check first product
+        Then I see the result "Tijolo Refratário 11,5x23x5,1cm -"
+
     Scenario: Search for "tijolo"
         Given I search for "tijolo"
         When I run the crawler
