@@ -2,26 +2,17 @@ CEC Crawler
 ===========
 
 Crawler de busca do site CEC.
+Mini crawler para extrair informações da página de busca do site CEC
 
-Deve receber um parâmetro busca e retornar o nome do item, valor e url da imagem.
 
-
-Instalar requirements:
+Como usar
+--------
 
     pip install -r requirements.txt
-
-
-Realizar testes:
-
-    python setup.py install
-    lettuce
-
-
-
-Uso:
-
     python crawler.py <parametro de busca>
 
-Ex:
+
+Exemplo:
+--------
 
     python crawler.py tijolo
