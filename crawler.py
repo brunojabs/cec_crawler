@@ -30,7 +30,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(FMT))
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.ERROR)
 logger.addHandler(handler)
 
 # remover \t do texto
@@ -46,26 +46,20 @@ class Crawler(object):
         self.db = CrawlerDB(filename=filename)
 
         self.products = []
-        self._cached_pages = {}
-        self.links = []
 
     def get(self, path_url):
         url = '%s%s' % (self.DOMAIN, path_url)
 
-        content = self._cached_pages.get(url, None)
-
-        if content is None:
-            try:
-                response = requests.get(url)
-            except Exception:
-                raise Exception(u'Não foi possível realizar a consulta')
-
-            self._cached_pages[url] = BeautifulSoup(response.content)
+        try:
+            response = requests.get(url)
+        except Exception:
+            logger.error('Não foi possível consultar a url %s' % url)
+            raise Exception(u'Não foi possível realizar a consulta')
 
         self.url = url
         logger.debug('Url visitada %s' % self.url)
 
-        return self._cached_pages[url]
+        return BeautifulSoup(response.content)
 
     def run(self, search_param):
         main_page = self.get(self.SEARCH_URL % search_param)
@@ -90,11 +84,9 @@ class Crawler(object):
 
     def next_page(self, page):
         nav = page.find('nav', attrs={'class': 'paginador'})
-        if nav:
-            next_page = nav.find('a', text=u'Próxima')
-            if next_page:
-                return self.get(next_page.attrs['href'])
-        return
+        next_page = nav.find('a', text=u'Próxima') if nav else None
+
+        return self.get(next_page.attrs['href']) if next_page else None
 
     def save_product(self, product_div):
         if product_div.findChildren():
@@ -174,7 +166,17 @@ if __name__ == '__main__':
         help=u"Nome do arquivo onde os dados serão salvos."
     )
 
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        dest="debug",
+        help=u"Modo de visualização para DEBUG"
+    )
+
     params = parser.parse_args()
+
+    if params.debug:
+        logger.setLevel(logging.DEBUG)
 
     crawler = Crawler(params.filename)
     crawler.run(search_param=params.search_param)
